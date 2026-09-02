@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Attendance Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+  </head>
+  <body class="dashboard-page">
+    <header class="site-header dashboard-header container">
+      <a class="brand" href="attendance.html" aria-label="Attendance dashboard home">
+        <span class="brand-mark">⌂</span>A27
+      </a>
+      <div class="header-actions">
+        <button class="plain-button" id="back-button">← <span>Back to Login</span></button>
+        <button class="refresh-button" id="refresh-button">↻ <span>Refresh</span></button>
+        <button class="theme-toggle" aria-label="Toggle colour theme">◐</button>
+      </div>
+    </header>
+
+    <nav class="portal-nav container" aria-label="Student portal">
+      <button data-section="attendance" class="active">📊 Attendance</button>
+      <button data-section="profile">👤 Profile</button>
+      <button data-section="daily-reports">📅 Daily</button>
+      <button data-section="all-dates">📋 All Dates</button>
+      <button data-section="results">🎓 Results</button>
+    </nav>
+
+    <main class="dashboard container" id="dashboard" aria-live="polite">
+      <section class="loading-panel" id="loading-panel">
+        <div class="loader-orbit"><i></i></div>
+        <h1>Finding your attendance</h1>
+        <p id="loading-message">Connecting to attendance portal…</p>
+        <div class="loading-dots"><b></b><b></b><b></b></div>
+      </section>
+      <section id="dashboard-content" hidden></section>
+      <section class="error-panel" id="error-panel" hidden>
+        <div>!</div>
+        <h1>We couldn’t load attendance</h1>
+        <p id="error-message"></p>
+        <button class="refresh-button" id="retry-button">Try again</button>
+      </section>
+    </main>
+
+    <footer class="container">
+      <span>© 2026 Attendance Portal by CSD</span>
+      <span>Independent student interface</span>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/attendance.js"></script>
+  </body>
+</html>
