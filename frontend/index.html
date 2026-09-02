@@ -1,55 +1,202 @@
 <!doctype html>
+
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A modern independent interface for public attendance lookup.">
-    <title>College Attendance</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- SEO -->
+<title>A27 Attendance Portal | SCCE Student Attendance</title>
+
+<meta
+  name="description"
+  content="A27 Attendance Portal for students of Sree Chaitanya College of Engineering, Karimnagar. Check student attendance using your Hall Ticket Number."
+>
+
+<meta
+  name="keywords"
+  content="A27, A27 Attendance, A27 Attendance Portal, A27 Student Attendance, A27 SCCE, SCCE, SCCE Attendance, SCCE Attendance Portal, SCCE Student Attendance, SCCE Karimnagar, SCCE CSD, CSD SCCE, SCCEA27, SCCE A27, Nithin CSD, Nithin SCCE, SCCENithin, CSD Attendance, CSD Student Attendance, Sree Chaitanya College of Engineering, Sree Chaitanya College Attendance, Sree Chaitanya Engineering College Attendance, Karimnagar Attendance, College Attendance Portal, Student Attendance Portal, Hall Ticket Attendance"
+>
+
+<meta name="robots" content="index, follow">
+
+<link
+  rel="canonical"
+  href="https://scceattendance.web.app/"
+>
+
+<!-- Open Graph -->
+<meta
+  property="og:title"
+  content="A27 Attendance Portal | SCCE Student Attendance"
+>
+
+<meta
+  property="og:description"
+  content="Check student attendance using your Hall Ticket Number."
+>
+
+<meta
+  property="og:url"
+  content="https://scceattendance.web.app/"
+>
+
+<meta
+  property="og:type"
+  content="website"
+>
+
+<meta
+  property="og:site_name"
+  content="A27 Attendance Portal"
+>
+
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "A27 Attendance Portal",
+  "alternateName": [
+    "A27 Attendance",
+    "SCCE Attendance",
+    "SCCE Attendance Portal",
+    "SCCE Student Attendance",
+    "SCCE A27 Attendance"
+  ],
+  "url": "https://scceattendance.web.app/",
+  "description": "Independent student attendance interface for checking attendance using a Hall Ticket Number.",
+  "applicationCategory": "EducationApplication",
+  "operatingSystem": "Web"
+}
+</script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+  rel="stylesheet"
+>
+
+<link rel="stylesheet" href="css/styles.css">
+
+
   </head>
+
   <body class="landing-page">
-    <header class="site-header container">
-      <a class="brand" href="index.html" aria-label="A27 attendance home">
-        <span class="brand-mark">⌂</span>A27
-      </a>
-      <nav>
-        <button class="theme-toggle" aria-label="Toggle colour theme" title="Toggle theme">◐</button>
-      </nav>
-    </header>
 
-    <main class="container landing-main">
-      <section class="hero" aria-labelledby="page-title">
-        <p class="eyebrow"><span></span>STUDENT ATTENDANCE</p>
-        <p class="college-name">Sree Chaitanya College of Engineering</p>
-        <h1 id="page-title">Check your<br><em>attendance.</em></h1>
-        <p class="hero-copy">Enter your Hall Ticket Number to view your latest attendance.</p>
 
-        <form id="attendance-form" class="lookup-card" novalidate>
-          <label for="hall-ticket">Hall Ticket Number</label>
-          <div class="input-row">
-            <input id="hall-ticket" name="hallTicket" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. 23N01A7444" aria-describedby="input-help form-error" maxlength="25">
-            <button id="submit-button" type="submit" disabled>
-              <span class="button-text">VIEW ATTENDANCE</span>
-              <span class="button-arrow">→</span>
-              <span class="spinner" aria-hidden="true"></span>
-            </button>
-          </div>
-          <p class="input-help" id="input-help">Enter the Hall Ticket Number issued by your college.</p>
-          <p id="form-error" class="form-error" role="alert"></p>
-        </form>
-      </section>
-    </main>
+<header class="site-header container">
+  <a
+    class="brand"
+    href="index.html"
+    aria-label="A27 attendance home"
+  >
+    <span class="brand-mark">⌂</span>A27
+  </a>
 
-    <footer class="container">
-      <span>© 2026 A27</span>
-      <span>Independent student interface</span>
-    </footer>
+  <nav>
+    <button
+      class="theme-toggle"
+      aria-label="Toggle colour theme"
+      title="Toggle theme"
+    >
+      ◐
+    </button>
+  </nav>
+</header>
 
-    <script src="js/config.js"></script>
-    <script src="js/common.js"></script>
-    <script src="js/home.js"></script>
+<main class="container landing-main">
+  <section class="hero" aria-labelledby="page-title">
+
+    <p class="eyebrow">
+      <span></span>STUDENT ATTENDANCE
+    </p>
+
+    <p class="college-name">
+      Sree Chaitanya College of Engineering
+    </p>
+
+    <h1 id="page-title">
+      Check your<br><em>attendance.</em>
+    </h1>
+
+    <p class="hero-copy">
+      Enter your Hall Ticket Number to view your latest attendance.
+    </p>
+
+    <form
+      id="attendance-form"
+      class="lookup-card"
+      novalidate
+    >
+      <label for="hall-ticket">
+        Hall Ticket Number
+      </label>
+
+      <div class="input-row">
+
+        <input
+          id="hall-ticket"
+          name="hallTicket"
+          type="text"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          placeholder="e.g. 23N01A7444"
+          aria-describedby="input-help form-error"
+          maxlength="25"
+        >
+
+        <button
+          id="submit-button"
+          type="submit"
+          disabled
+        >
+          <span class="button-text">
+            VIEW ATTENDANCE
+          </span>
+
+          <span class="button-arrow">→</span>
+
+          <span
+            class="spinner"
+            aria-hidden="true"
+          ></span>
+        </button>
+
+      </div>
+
+      <p
+        class="input-help"
+        id="input-help"
+      >
+        Enter the Hall Ticket Number issued by your college.
+      </p>
+
+      <p
+        id="form-error"
+        class="form-error"
+        role="alert"
+      ></p>
+    </form>
+
+  </section>
+</main>
+
+<footer class="container">
+  <span>© 2026 A27</span>
+  <span>Independent student interface</span>
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/common.js"></script>
+<script src="js/home.js"></script>
+
+
   </body>
 </html>
