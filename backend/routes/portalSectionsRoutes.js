@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { allDates, dailyReports, profile, results } from '../controllers/portalSectionsController.js';
+import { allDates, bonafide, bonafidePdf, dailyReports, forgotHallTicket, profile, results } from '../controllers/portalSectionsController.js';
 
 const router = Router();
 
@@ -8,5 +8,8 @@ router.post('/profile', profile);
 router.post('/daily-reports', dailyReports);
 router.post('/all-dates', allDates);
 router.post('/results', results);
+router.post('/forgot-hall-ticket', forgotHallTicket);
+router.post('/bonafide', bonafide);
+router.post('/bonafide/pdf', bonafidePdf);
 
 export default router;
