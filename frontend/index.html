@@ -183,6 +183,17 @@
         class="form-error"
         role="alert"
       ></p>
+
+      <button class="forgot-ticket-button" id="forgot-ticket-button" type="button">Forgot Hall Ticket Number?</button>
+      <div class="forgot-ticket-form" id="forgot-ticket-form" hidden>
+        <label for="forgot-name">Any 4 letters of your name</label>
+        <div class="input-row">
+          <input id="forgot-name" type="text" autocomplete="name" maxlength="80">
+          <button id="forgot-search-button" type="button">SEARCH</button>
+        </div>
+        <p class="form-error" id="forgot-error" role="alert"></p>
+        <div class="forgot-results" id="forgot-results"></div>
+      </div>
     </form>
 
   </section>

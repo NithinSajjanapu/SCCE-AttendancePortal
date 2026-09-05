@@ -62,3 +62,16 @@ window.portalApi = async (endpoint, body) => {
 
   return result.data;
 };
+
+window.downloadBonafidePdf = async (hallTicket) => {
+  const base = window.APP_CONFIG?.API_BASE_URL || '';
+  const response = await fetch(`${base}/api/bonafide/pdf`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hallTicket }) });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result.message || 'Unable to create the Bonafide PDF.');
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url; link.download = `A27_Bonafide_${hallTicket}.pdf`; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};

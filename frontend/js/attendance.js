@@ -372,6 +372,10 @@ function renderPortalSection(section, data) {
     content.innerHTML = `
       <section class="section-heading">
         <div><p class="eyebrow">ACADEMIC RESULTS</p><h2>Academic results</h2></div>
+        <button class="plain-button" id="backlogs-button">→ Backlogs (${(data.backlogs || []).length})</button>
+      </section>
+      <section class="profile-list result-summary">
+        ${[['Name', data.summary?.name], ['Hall No', data.summary?.hallTicket], ['CGPA', data.summary?.cgpa], ['Percentage', data.summary?.percentage ? `${data.summary.percentage}%` : ''], ['Credits', data.summary?.credits]].filter(([, value]) => value).map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}
       </section>
       <section class="results-list">
         ${Object.entries(semesters).map(([semester, records]) => `
@@ -386,7 +390,7 @@ function renderPortalSection(section, data) {
                 <div>
                   <div>
                     <strong>${escapeHtml(record.subject)}</strong>
-                    <span>EM ${Number.isFinite(externalMarks) ? externalMarks : '—'} · ${record.totalMarks} / ${record.maximumMarks} marks · ${record.credits} credits</span>
+                    <span>${escapeHtml(record.subjectCode)} · Grade ${escapeHtml(record.grade)} · ${escapeHtml(record.totalMarks)} / ${escapeHtml(record.maximumMarks)} marks · ${escapeHtml(record.credits)} credits</span>
                   </div>
                   <b class="result-status ${passed ? 'passed' : 'failed'}">${passed ? 'PASS' : 'FAIL'}</b>
                 </div>
@@ -395,32 +399,48 @@ function renderPortalSection(section, data) {
           </section>
         `).join('') || '<p class="empty-state">No results available.</p>'}
       </section>
+      <section class="section-heading" id="backlogs-section"><div><p class="eyebrow">BACKLOGS</p><h2>Backlogs - ${(data.backlogs || []).length}</h2></div></section>
+      <section class="results-list">${(data.backlogs || []).map((record) => `<div><div><strong>${escapeHtml(record.subject)}</strong><span>${escapeHtml(record.subjectCode)} · Grade ${escapeHtml(record.grade)} · Year ${escapeHtml(record.year)} · Semester ${escapeHtml(record.semester)}</span></div><b class="result-status failed">BACKLOG</b></div>`).join('') || '<p class="empty-state">No Backlogs</p>'}</section>
     `;
+    document.querySelector('#backlogs-button').addEventListener('click', () => document.querySelector('#backlogs-section').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  } else if (section === 'bonafide') {
+    content.innerHTML = `
+      <section class="section-heading"><div><p class="eyebrow">BONAFIDE</p><h2>Bonafide certificate</h2></div></section>
+      <section class="bonafide-view"><iframe id="bonafide-frame" title="Bonafide certificate" sandbox="allow-same-origin"></iframe></section>
+      <button class="refresh-button" id="download-bonafide">Download PDF</button>`;
+    const frame = document.querySelector('#bonafide-frame');
+    frame.srcdoc = data.html;
+    document.querySelector('#download-bonafide').addEventListener('click', async (event) => {
+      event.currentTarget.disabled = true;
+      try { await window.downloadBonafidePdf(state.hallTicket); } catch (error) { renderSectionError(error.message); } finally { event.currentTarget.disabled = false; }
+    });
   }
 
   content.hidden = false;
 }
 
-/** Build the All Dates summary from SCCE's earliest record and the browser's current day. */
+/** Build the All Dates summary exclusively from dates actually returned by SCCE. */
 function createDateRange(records) {
   if (!records.length || !/^\d{2}-\d{2}-\d{4}$/.test(records[0].date)) {
     return null;
   }
 
-  const [day, month, year] = records[0].date.split('-').map(Number);
-  const start = new Date(year, month - 1, day);
-  const today = new Date();
-  start.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-
-  const days = Math.max(1, Math.floor((today - start) / 86400000) + 1);
+  const uniqueDates = [...new Set(records.map((record) => record.date).filter((date) => /^\d{2}-\d{2}-\d{4}$/.test(date)))];
+  if (!uniqueDates.length) return null;
+  const toDate = (value) => {
+    const [day, month, year] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  const dates = uniqueDates.map(toDate).sort((first, second) => first - second);
+  const start = dates[0];
+  const end = dates[dates.length - 1];
   const label = new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric'
   });
 
-  return { start: label.format(start), end: label.format(today), days };
+  return { start: label.format(start), end: label.format(end), days: uniqueDates.length };
 }
 
 async function loadSection(section, date = '') {
@@ -432,7 +452,27 @@ async function loadSection(section, date = '') {
   if (section === 'attendance') {
     return loadAttendance();
   }
+  if (section === 'bonafide') {
+    loadingPanel.hidden = true;
+    errorPanel.hidden = true;
+    content.hidden = false;
 
+    content.innerHTML = `
+      <section class="section-heading">
+        <div>
+          <p class="eyebrow">BONAFIDE</p>
+          <h2>Bonafide certificate</h2>
+        </div>
+      </section>
+
+      <section class="empty-state">
+        <h2>Under Maintenance by Arc</h2>
+        <p>We’ll be back as soon as possible.</p>
+      </section>
+    `;
+
+    return;
+  }
   loadingPanel.hidden = false;
   content.hidden = true;
   errorPanel.hidden = true;

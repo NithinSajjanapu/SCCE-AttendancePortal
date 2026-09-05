@@ -1,6 +1,6 @@
 // 1. Import Firebase features using standard web URLs
-import { initializeApp } from "https://gstatic.com";
-import { getAnalytics } from "https://gstatic.com";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 
 // 2. Your project's unique configuration
 const firebaseConfig = {

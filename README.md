@@ -36,6 +36,9 @@ npm install --prefix backend
 npm run dev
 ```
 
+If your terminal is already in `backend/`, run `npm install` and `npm run dev`
+there instead; do not add `--prefix backend` a second time.
+
 Open [http://localhost:5000](http://localhost:5000). The development server serves the frontend and API together. The health check is available at `/api/health`.
 
 If port 5000 is already in use, an earlier server instance is still running. Stop that instance before starting another one, or set a different `PORT` value in the backend environment.
@@ -71,6 +74,9 @@ All portal requests use `POST` and accept a JSON body containing a Hall Ticket n
 | `/api/daily-reports` | Available dates and a selected daily report |
 | `/api/all-dates` | Complete attendance history |
 | `/api/results` | Academic results using real SCCE response rows |
+| `/api/forgot-hall-ticket` | Finds matching Hall Ticket Numbers from four or more name letters |
+| `/api/bonafide` | Retrieves the current Bonafide certificate HTML |
+| `/api/bonafide/pdf` | Downloads the current Bonafide certificate as a PDF |
 
 `/api/daily-reports` may also include `date` in the request body. Successful section requests return `{ "success": true, "data": {} }`; attendance retains its existing response shape for frontend compatibility.
 
@@ -89,9 +95,10 @@ All portal requests use `POST` and accept a JSON body containing a Hall Ticket n
 3. Add the environment variables from `backend/.env` in Render's secure configuration.
 4. Set `NODE_ENV=production` and `FRONTEND_ORIGIN` to the deployed frontend origin.
 
-### Frontend (Vercel)
+### Frontend (Firebase Hosting)
 
-1. Create a static Vercel project with `frontend` as the root directory.
+1. Install the Firebase CLI and authenticate with the Firebase project.
 2. Set `API_BASE_URL` in `frontend/js/config.js` to the deployed backend URL before deploying.
+3. Run `firebase deploy --only hosting --config frontend/firebase.json` from the repository root.
 
 This project uses only the normal public SCCE portal flow. It does not bypass CAPTCHA, authentication, authorization, or other access controls.
