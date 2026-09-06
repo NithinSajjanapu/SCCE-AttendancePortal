@@ -424,8 +424,9 @@ function renderPortalSection(section, data) {
     resizeObserver.observe(frame.parentElement);
     fitBonafide();
     document.querySelector('#download-bonafide').addEventListener('click', async (event) => {
-      event.currentTarget.disabled = true;
-      try { await window.downloadBonafidePdf(state.hallTicket); } catch (error) { renderSectionError(error.message); } finally { event.currentTarget.disabled = false; }
+      const button = event.currentTarget;
+      button.disabled = true;
+      try { await window.downloadBonafidePdf(state.hallTicket); } catch (error) { renderSectionError(error.message); } finally { button.disabled = false; }
     });
   }
 

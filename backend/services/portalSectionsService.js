@@ -8,6 +8,34 @@ const number = (value) => Number(clean(value).match(/\d+/)?.[0] || 0);
 const PUBLIC_BASE_URL = 'https://scce.ac.in/parent12/';
 const RESULTS_URL = 'https://scce.ac.in/result/index.php';
 const timeoutMs = Number(process.env.COLLEGE_REQUEST_TIMEOUT_MS || 12000);
+let bonafideBrowserPromise;
+
+async function getBonafideBrowser() {
+  if (!bonafideBrowserPromise) {
+    const localChrome = process.platform === 'win32'
+      ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+      : undefined;
+    bonafideBrowserPromise = puppeteer.launch({
+      headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || localChrome,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+    try {
+      const browser = await bonafideBrowserPromise;
+      browser.once('disconnected', () => { bonafideBrowserPromise = undefined; });
+    } catch (error) {
+      bonafideBrowserPromise = undefined;
+      throw error;
+    }
+  }
+  return bonafideBrowserPromise;
+}
+
+function warmBonafideBrowser() {
+  // Render can take tens of seconds to start Chromium. Start it while the
+  // certificate is being viewed, rather than making the PDF request wait.
+  void getBonafideBrowser().catch((error) => console.error('Bonafide browser warm-up failed:', error.message));
+}
 
 async function publicPost(url, fields) {
   const controller = new AbortController();
@@ -91,30 +119,28 @@ async function getBonafideHtml(hallTicket) {
   return $.html();
 }
 
-export async function getBonafide(hallTicket) { return { html: await getBonafideHtml(hallTicket) }; }
+export async function getBonafide(hallTicket) {
+  const html = await getBonafideHtml(hallTicket);
+  warmBonafideBrowser();
+  return { html };
+}
 
 export async function getBonafidePdf(hallTicket) {
   const html = await getBonafideHtml(hallTicket);
-  let browser;
+  let page;
   try {
-    const localChrome = process.platform === 'win32'
-      ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-      : undefined;
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || localChrome,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    const page = await browser.newPage();
+    const browser = await getBonafideBrowser();
+    page = await browser.newPage();
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: timeoutMs });
+    await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs });
     await page.emulateMediaType('print');
     return Buffer.from(await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true }));
   } catch (error) {
+    console.error('Bonafide PDF render failed:', error);
     if (error.name === 'TimeoutError') throw new AttendanceError('TIMEOUT', 'The Bonafide certificate took too long to render.', 504);
     throw new AttendanceError('PDF_ERROR', 'Unable to create the Bonafide PDF right now.');
   } finally {
-    await browser?.close();
+    await page?.close();
   }
 }
 
