@@ -1,5 +1,7 @@
 backend/node_modules/
 backend/.env
+backend/.cache/
 .DS_Store
-frontend/.firebase/hosting..cache
+frontend/.firebase/
 frontend/google0ae223bd6cd02e55.html
+node_modules/
