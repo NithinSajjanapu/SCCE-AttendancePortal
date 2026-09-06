@@ -407,7 +407,8 @@ function renderPortalSection(section, data) {
     content.innerHTML = `
       <section class="section-heading"><div><p class="eyebrow">BONAFIDE</p><h2>Bonafide certificate</h2></div></section>
       <section class="bonafide-view"><iframe id="bonafide-frame" title="Bonafide certificate" sandbox="allow-same-origin"></iframe></section>
-      <button class="refresh-button" id="download-bonafide">Download PDF</button>`;
+      <button class="refresh-button" id="download-bonafide">Download PDF</button>
+      <p class="bonafide-download-error" id="bonafide-download-error" hidden role="alert"></p>`;
     const frame = document.querySelector('#bonafide-frame');
     frame.srcdoc = data.html;
     const fitBonafide = () => {
@@ -425,8 +426,10 @@ function renderPortalSection(section, data) {
     fitBonafide();
     document.querySelector('#download-bonafide').addEventListener('click', async (event) => {
       const button = event.currentTarget;
+      const errorMessage = document.querySelector('#bonafide-download-error');
       button.disabled = true;
-      try { await window.downloadBonafidePdf(state.hallTicket); } catch (error) { renderSectionError(error.message); } finally { button.disabled = false; }
+      errorMessage.hidden = true;
+      try { await window.downloadBonafidePdf(state.hallTicket); } catch (error) { errorMessage.textContent = error.message; errorMessage.hidden = false; } finally { button.disabled = false; }
     });
   }
 

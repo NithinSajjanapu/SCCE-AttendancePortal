@@ -37,6 +37,10 @@ function warmBonafideBrowser() {
   void getBonafideBrowser().catch((error) => console.error('Bonafide browser warm-up failed:', error.message));
 }
 
+// Start the renderer during application startup. By the time a student opens
+// the Bonafide section, Render's Chromium startup cost has already elapsed.
+warmBonafideBrowser();
+
 async function publicPost(url, fields) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -96,7 +100,10 @@ async function getBonafideHtml(hallTicket) {
   if (/certificate disabled|contact\s+ao/i.test(html)) throw new AttendanceError('CERTIFICATE_UNAVAILABLE', 'A Bonafide certificate is not available for this Hall Ticket Number.', 404);
   if (!/BONAFIDE CERTIFICATE/i.test(html)) throw new AttendanceError('UNREADABLE_RESPONSE', 'Unable to read the Bonafide certificate right now.');
   const $ = cheerio.load(html);
-  $('script').remove();
+  $('script, noscript').remove();
+  $('*').each((_i, element) => {
+    Object.keys(element.attribs || {}).filter((name) => /^on/i.test(name)).forEach((name) => $(element).removeAttr(name));
+  });
   $('img[src]').each((_i, image) => $(image).attr('src', new URL($(image).attr('src'), `${PUBLIC_BASE_URL}bc/`).toString()));
   $('head').append(`<style id="a27-certificate-layout">
     /* Render the portal's certificate on one predictable A4 canvas.  The
