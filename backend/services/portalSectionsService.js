@@ -71,15 +71,22 @@ async function getBonafideHtml(hallTicket) {
   $('script').remove();
   $('img[src]').each((_i, image) => $(image).attr('src', new URL($(image).attr('src'), `${PUBLIC_BASE_URL}bc/`).toString()));
   $('head').append(`<style id="a27-certificate-layout">
-    @page { size: A4 portrait; margin: 8mm; }
+    /* Render the portal's certificate on one predictable A4 canvas.  The
+       portal uses a fixed-width table inside another table; both must share
+       the printable width or the inner content is cut off. */
+    @page { size: A4 portrait; margin: 0; }
     * { box-sizing: border-box; }
-    html, body { width: 100%; max-width: 100%; margin: 0; overflow-x: hidden; }
-    body { padding: 8px; }
-    body > center, body > center > table { display: block; width: 100% !important; max-width: 100% !important; }
-    table { max-width: 100% !important; height: auto !important; }
-    img { display: block; max-width: 100% !important; height: auto !important; margin-left: auto; margin-right: auto; }
-    .style12 { font-size: clamp(13px, 2.1vw, 20px) !important; line-height: 1.65 !important; }
-    @media print { body { padding: 0; } .style12 { font-size: 16px !important; } }
+    html, body { width: 210mm; min-height: 297mm; margin: 0; overflow: hidden; background: #fff; }
+    body { padding: 10mm; }
+    center { display: block; width: 100%; }
+    center > table,
+    center > table > tbody > tr > td > table {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+    }
+    img { max-width: 100% !important; height: auto !important; }
+    .style12 { font-size: 16px !important; line-height: 1.65 !important; }
   </style>`);
   return $.html();
 }
@@ -99,9 +106,9 @@ export async function getBonafidePdf(hallTicket) {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     const page = await browser.newPage();
-    await page.setViewport({ width: 1100, height: 1400, deviceScaleFactor: 1 });
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: timeoutMs });
-    await page.emulateMediaType('screen');
+    await page.emulateMediaType('print');
     return Buffer.from(await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true }));
   } catch (error) {
     if (error.name === 'TimeoutError') throw new AttendanceError('TIMEOUT', 'The Bonafide certificate took too long to render.', 504);

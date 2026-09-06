@@ -410,6 +410,19 @@ function renderPortalSection(section, data) {
       <button class="refresh-button" id="download-bonafide">Download PDF</button>`;
     const frame = document.querySelector('#bonafide-frame');
     frame.srcdoc = data.html;
+    const fitBonafide = () => {
+      const pageWidth = 794;
+      const pageHeight = 1123;
+      const availableWidth = frame.parentElement.clientWidth;
+      const scale = Math.min(1, availableWidth / pageWidth);
+      frame.style.width = `${pageWidth}px`;
+      frame.style.height = `${pageHeight}px`;
+      frame.style.transform = `scale(${scale})`;
+      frame.parentElement.style.height = `${pageHeight * scale}px`;
+    };
+    const resizeObserver = new ResizeObserver(fitBonafide);
+    resizeObserver.observe(frame.parentElement);
+    fitBonafide();
     document.querySelector('#download-bonafide').addEventListener('click', async (event) => {
       event.currentTarget.disabled = true;
       try { await window.downloadBonafidePdf(state.hallTicket); } catch (error) { renderSectionError(error.message); } finally { event.currentTarget.disabled = false; }
@@ -451,27 +464,6 @@ async function loadSection(section, date = '') {
 
   if (section === 'attendance') {
     return loadAttendance();
-  }
-  if (section === 'bonafide') {
-    loadingPanel.hidden = true;
-    errorPanel.hidden = true;
-    content.hidden = false;
-
-    content.innerHTML = `
-      <section class="section-heading">
-        <div>
-          <p class="eyebrow">BONAFIDE</p>
-          <h2>Bonafide certificate</h2>
-        </div>
-      </section>
-
-      <section class="empty-state">
-        <h2>Under Maintenance by Arc</h2>
-        <p>We’ll be back as soon as possible.</p>
-      </section>
-    `;
-
-    return;
   }
   loadingPanel.hidden = false;
   content.hidden = true;
