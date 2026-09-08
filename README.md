@@ -91,7 +91,7 @@ All portal requests use `POST` and accept a JSON body containing a Hall Ticket n
 ### Backend (Render)
 
 1. Create a Web Service with `backend` as its root directory.
-2. Use `node scripts/repair-puppeteer-cache.cjs && npm install && npm rebuild puppeteer && node scripts/verify-puppeteer-chrome.cjs` as the build command and `node server.js` as the start command. The repair step removes only a cached Linux Chrome directory that is missing its executable; `npm rebuild puppeteer` reruns Puppeteer's official browser installer even when `npm install` is already up to date; the final check prevents deployment without the exact executable. A healthy cache is retained.
+2. Use `npm install` as the build command and `node server.js` as the start command. Bonafide certificates are generated natively with PDFKit; no browser runtime is required.
 3. Add the environment variables from `backend/.env` in Render's secure configuration.
 4. Set `NODE_ENV=production` and `FRONTEND_ORIGIN` to the deployed frontend origin.
 
