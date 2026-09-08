@@ -3,21 +3,22 @@ const { join } = require('node:path');
 
 // Render can restore node_modules from its build cache. Puppeteer deliberately
 // refuses to overwrite an installation directory when its Chrome executable is
-// absent, so remove only those provably incomplete Linux Chrome directories.
+// absent, so remove only those provably incomplete Chrome directories.
 // A healthy cached browser remains untouched and is not downloaded again.
-if (process.platform === 'linux') {
-  const chromeRoot = join(__dirname, '..', 'node_modules', '.cache', 'puppeteer', 'chrome');
+const chromeRoot = join(__dirname, '..', 'node_modules', '.cache', 'puppeteer', 'chrome');
 
-  if (existsSync(chromeRoot)) {
-    for (const entry of readdirSync(chromeRoot, { withFileTypes: true })) {
-      if (!entry.isDirectory() || !entry.name.startsWith('linux-')) continue;
+if (existsSync(chromeRoot)) {
+  for (const entry of readdirSync(chromeRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
 
-      const installation = join(chromeRoot, entry.name);
-      const executable = join(installation, 'chrome-linux64', 'chrome');
-      if (!existsSync(executable)) {
-        rmSync(installation, { recursive: true, force: true });
-        console.log(`PUPPETEER_CACHE_REPAIRED ${entry.name}`);
-      }
+    const executable = entry.name.startsWith('linux-')
+      ? join(chromeRoot, entry.name, 'chrome-linux64', 'chrome')
+      : entry.name.startsWith('win64-')
+        ? join(chromeRoot, entry.name, 'chrome-win64', 'chrome.exe')
+        : null;
+    if (executable && !existsSync(executable)) {
+      rmSync(join(chromeRoot, entry.name), { recursive: true, force: true });
+      console.log(`PUPPETEER_CACHE_REPAIRED ${entry.name}`);
     }
   }
 }
