@@ -158,24 +158,28 @@ async function renderBonafidePdf(certificate, images) {
     doc.once('error', reject);
     doc.once('end', () => resolve(Buffer.concat(chunks)));
     try {
-      const { width: pageWidth, height: pageHeight } = doc.page;
+      const { width: pageWidth } = doc.page;
       const border = 28;
-      const contentX = border + 28;
-      const contentWidth = pageWidth - (contentX * 2);
-      doc.lineWidth(1.5).roundedRect(border, border, pageWidth - (border * 2), pageHeight - (border * 2), 15).stroke();
-      const logoHeight = drawImageContain(doc, logo, contentX, 48, contentWidth, 100);
-      const titleY = 58 + logoHeight;
-      doc.font('Times-Bold').fontSize(17).text(certificate.title, contentX, titleY, { width: contentWidth, align: 'center', underline: true });
-      const detailsY = titleY + 44;
-      doc.font('Times-Italic').fontSize(14)
-        .text(`Admission No : ${certificate.admissionNumber}     Date of Admission : ${certificate.dateOfAdmission}`, contentX, detailsY, { width: contentWidth })
-        .text(`Hall Ticket  No : ${certificate.hallTicket}                                              Date : ${certificate.certificateDate}`, contentX, detailsY + 27, { width: contentWidth });
-      doc.font('Times-Italic').fontSize(14).text(certificateBody(certificate), contentX, detailsY + 84, { width: contentWidth, align: 'justify', lineGap: 9 });
-      const signatureY = pageHeight - 190;
-      drawImageContain(doc, signature, contentX, signatureY, contentWidth, 95);
-      doc.font('Times-Italic').fontSize(14).text('Clerk', contentX, signatureY + 112, { width: contentWidth / 3, align: 'center' });
-      doc.text('AO', contentX + (contentWidth / 3), signatureY + 112, { width: contentWidth / 3, align: 'center' });
-      doc.text('Principal', contentX + (contentWidth * 2 / 3), signatureY + 112, { width: contentWidth / 3, align: 'center' });
+      const borderHeight = 390;
+      const headerX = border + 28;
+      const headerWidth = pageWidth - (headerX * 2);
+      const textX = border + 7;
+      const textWidth = pageWidth - (textX * 2);
+      doc.lineWidth(1.5).roundedRect(border, border, pageWidth - (border * 2), borderHeight, 15).stroke();
+      const logoHeight = drawImageContain(doc, logo, headerX, 40, headerWidth, 58);
+      const titleY = 46 + logoHeight;
+      doc.font('Times-Bold').fontSize(17).text(certificate.title, headerX, titleY, { width: headerWidth, align: 'center', underline: true });
+      const detailsY = titleY + 36;
+      doc.font('Times-Italic').fontSize(12)
+        .text(`Admission No : ${certificate.admissionNumber} & Date of Admission : ${certificate.dateOfAdmission}                         Date:${certificate.certificateDate}`, textX, detailsY, { width: textWidth })
+        .text(`Hall Ticket No : ${certificate.hallTicket}`, textX, detailsY + 23, { width: textWidth });
+      doc.font('Times-Italic').fontSize(14).text(certificateBody(certificate), textX, detailsY + 73, { width: textWidth, align: 'justify', lineGap: 7 });
+      const signatureY = 300;
+      drawImageContain(doc, signature, headerX, signatureY, headerWidth, 62);
+      const labelY = 373;
+      doc.font('Times-Italic').fontSize(14).text('Clerk', textX, labelY, { width: textWidth / 3, align: 'center' });
+      doc.text('AO', textX + (textWidth / 3), labelY, { width: textWidth / 3, align: 'center' });
+      doc.text('Principal', textX + (textWidth * 2 / 3), labelY, { width: textWidth / 3, align: 'center' });
       doc.end();
     } catch (error) { reject(error); }
   });
