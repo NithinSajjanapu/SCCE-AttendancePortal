@@ -74,7 +74,7 @@ function valueAfter(text, expression) {
 
 function parseBonafideCertificate($, hallTicket) {
   const details = clean($('p.style12').first().text());
-  const values = $('p.style12').eq(1).find('u strong').map((_index, item) => clean($(item).text())).get().filter(Boolean);
+  const values = $('p.style12').eq(1).find('strong').map((_index, item) => clean($(item).text())).get().filter(Boolean);
   const [studentName, fatherName, course, year, branch, academicYear, dateOfBirth, conduct] = values;
   return {
     title: clean($('.style11').first().text()) || 'BONAFIDE CERTIFICATE',
