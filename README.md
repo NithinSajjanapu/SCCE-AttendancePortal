@@ -91,7 +91,7 @@ All portal requests use `POST` and accept a JSON body containing a Hall Ticket n
 ### Backend (Render)
 
 1. Create a Web Service with `backend` as its root directory.
-2. Use `npm install` as the build command and `npm start` as the start command.
+2. Use `npm install && npx puppeteer browsers install chrome` as the build command and `node server.js` as the start command. Puppeteer's committed backend configuration installs the required Chrome revision into `backend/.cache/puppeteer`, which is available to the Render runtime and is not Render's shared home cache.
 3. Add the environment variables from `backend/.env` in Render's secure configuration.
 4. Set `NODE_ENV=production` and `FRONTEND_ORIGIN` to the deployed frontend origin.
 

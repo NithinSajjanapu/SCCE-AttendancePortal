@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { existsSync } from 'node:fs';
 import puppeteer from 'puppeteer';
 import { AttendanceError } from './collegeAttendanceService.js';
 
@@ -12,19 +13,36 @@ let bonafideBrowserPromise;
 
 async function getBonafideBrowser() {
   if (!bonafideBrowserPromise) {
-    const localChrome = process.platform === 'win32'
-      ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-      : undefined;
-    bonafideBrowserPromise = puppeteer.launch({
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || localChrome,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
+    bonafideBrowserPromise = (async () => {
+      // executablePath() is the exact browser revision managed by this
+      // Puppeteer installation (or the explicitly configured executable).
+      // Check it before launch so a cache/deployment problem is clear in logs
+      // without exposing a server filesystem path to API clients.
+      if (!existsSync(puppeteer.executablePath())) {
+        throw new AttendanceError(
+          'BONAFIDE_BROWSER_UNAVAILABLE',
+          'The Bonafide PDF service is temporarily unavailable. Please try again later.',
+          503
+        );
+      }
+
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      });
+      browser.once('disconnected', () => {
+        bonafideBrowserPromise = undefined;
+        console.warn('BONAFIDE_BROWSER_DISCONNECTED');
+      });
+      console.log('BONAFIDE_BROWSER_READY');
+      return browser;
+    })();
+
     try {
-      const browser = await bonafideBrowserPromise;
-      browser.once('disconnected', () => { bonafideBrowserPromise = undefined; });
+      await bonafideBrowserPromise;
     } catch (error) {
       bonafideBrowserPromise = undefined;
+      console.error('BONAFIDE_BROWSER_INIT_FAILED', error.code || error.name);
       throw error;
     }
   }
@@ -32,14 +50,13 @@ async function getBonafideBrowser() {
 }
 
 function warmBonafideBrowser() {
-  // Render can take tens of seconds to start Chromium. Start it while the
-  // certificate is being viewed, rather than making the PDF request wait.
-  void getBonafideBrowser().catch((error) => console.error('Bonafide browser warm-up failed:', error.message));
+  // Warm only after SCCE has returned a real certificate. This avoids an
+  // unnecessary browser launch (and a misleading startup failure) for users
+  // who never use the Bonafide feature.
+  void getBonafideBrowser().catch((error) => {
+    console.error('BONAFIDE_BROWSER_WARMUP_FAILED', error.code || error.name);
+  });
 }
-
-// Start the renderer during application startup. By the time a student opens
-// the Bonafide section, Render's Chromium startup cost has already elapsed.
-warmBonafideBrowser();
 
 async function publicPost(url, fields) {
   const controller = new AbortController();
@@ -138,16 +155,27 @@ export async function getBonafidePdf(hallTicket) {
   try {
     const browser = await getBonafideBrowser();
     page = await browser.newPage();
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      const url = request.url();
+      const isCertificateResource = url.startsWith(`${PUBLIC_BASE_URL}bc/`);
+      if (url === 'about:blank' || url.startsWith('data:') || isCertificateResource) {
+        void request.continue();
+      } else {
+        void request.abort('blockedbyclient');
+      }
+    });
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
     await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs });
     await page.emulateMediaType('print');
     return Buffer.from(await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true }));
   } catch (error) {
-    console.error('Bonafide PDF render failed:', error);
+    if (error instanceof AttendanceError) throw error;
+    console.error('BONAFIDE_PDF_FAILED', error.name);
     if (error.name === 'TimeoutError') throw new AttendanceError('TIMEOUT', 'The Bonafide certificate took too long to render.', 504);
     throw new AttendanceError('PDF_ERROR', 'Unable to create the Bonafide PDF right now.');
   } finally {
-    await page?.close();
+    await page?.close().catch(() => {});
   }
 }
 
