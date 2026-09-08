@@ -1,6 +1,5 @@
 import * as cheerio from 'cheerio';
-import { existsSync } from 'node:fs';
-import puppeteer from 'puppeteer';
+import PDFDocument from 'pdfkit';
 import { AttendanceError } from './collegeAttendanceService.js';
 
 const BASE_URL = 'https://scce.ac.in/parentm/';
@@ -9,54 +8,6 @@ const number = (value) => Number(clean(value).match(/\d+/)?.[0] || 0);
 const PUBLIC_BASE_URL = 'https://scce.ac.in/parent12/';
 const RESULTS_URL = 'https://scce.ac.in/result/index.php';
 const timeoutMs = Number(process.env.COLLEGE_REQUEST_TIMEOUT_MS || 12000);
-let bonafideBrowserPromise;
-
-async function getBonafideBrowser() {
-  if (!bonafideBrowserPromise) {
-    bonafideBrowserPromise = (async () => {
-      // executablePath() is the exact browser revision managed by this
-      // Puppeteer installation (or the explicitly configured executable).
-      // Check it before launch so a cache/deployment problem is clear in logs
-      // without exposing a server filesystem path to API clients.
-      if (!existsSync(puppeteer.executablePath())) {
-        throw new AttendanceError(
-          'BONAFIDE_BROWSER_UNAVAILABLE',
-          'The Bonafide PDF service is temporarily unavailable. Please try again later.',
-          503
-        );
-      }
-
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-      });
-      browser.once('disconnected', () => {
-        bonafideBrowserPromise = undefined;
-        console.warn('BONAFIDE_BROWSER_DISCONNECTED');
-      });
-      console.log('BONAFIDE_BROWSER_READY');
-      return browser;
-    })();
-
-    try {
-      await bonafideBrowserPromise;
-    } catch (error) {
-      bonafideBrowserPromise = undefined;
-      console.error('BONAFIDE_BROWSER_INIT_FAILED', error.code || error.name);
-      throw error;
-    }
-  }
-  return bonafideBrowserPromise;
-}
-
-function warmBonafideBrowser() {
-  // Warm only after SCCE has returned a real certificate. This avoids an
-  // unnecessary browser launch (and a misleading startup failure) for users
-  // who never use the Bonafide feature.
-  void getBonafideBrowser().catch((error) => {
-    console.error('BONAFIDE_BROWSER_WARMUP_FAILED', error.code || error.name);
-  });
-}
 
 async function publicPost(url, fields) {
   const controller = new AbortController();
@@ -112,70 +63,132 @@ export async function getResults(hallTicket) {
   return parseResultsHtml(await publicPost(RESULTS_URL, { htno: hallTicket, resultstu: 'Results' }), hallTicket);
 }
 
-async function getBonafideHtml(hallTicket) {
-  const html = await publicPost(`${PUBLIC_BASE_URL}bc/bc.php`, { HallticketNo: hallTicket, submit: 'Login' });
-  if (/certificate disabled|contact\s+ao/i.test(html)) throw new AttendanceError('CERTIFICATE_UNAVAILABLE', 'A Bonafide certificate is not available for this Hall Ticket Number.', 404);
-  if (!/BONAFIDE CERTIFICATE/i.test(html)) throw new AttendanceError('UNREADABLE_RESPONSE', 'Unable to read the Bonafide certificate right now.');
-  const $ = cheerio.load(html);
+function getBonafideImageUrls($) {
+  const images = $('img[src]').map((_index, image) => new URL($(image).attr('src'), `${PUBLIC_BASE_URL}bc/`).toString()).get();
+  return { logoUrl: images[0] || null, signatureUrl: images[1] || null };
+}
+
+function valueAfter(text, expression) {
+  return clean(text.match(expression)?.[1] || '');
+}
+
+function parseBonafideCertificate($, hallTicket) {
+  const details = clean($('p.style12').first().text());
+  const values = $('p.style12').eq(1).find('u strong').map((_index, item) => clean($(item).text())).get().filter(Boolean);
+  const [studentName, fatherName, course, year, branch, academicYear, dateOfBirth, conduct] = values;
+  return {
+    title: clean($('.style11').first().text()) || 'BONAFIDE CERTIFICATE',
+    admissionNumber: valueAfter(details, /Admission\s*No\s*:\s*(.*?)(?=\s*Date\s+of\s+Admission\s*:|$)/i),
+    dateOfAdmission: valueAfter(details, /Date\s+of\s+Admission\s*:\s*(.*?)(?=\s+Date\s*:|\s+Hall\s+Ticket|$)/i),
+    certificateDate: valueAfter(details, /(?:^|\s)Date\s*:\s*(.*?)(?=\s+Hall\s+Ticket|$)/i),
+    hallTicket: valueAfter(details, /Hall\s*Ticket\s*No\s*:\s*(.*)$/i) || hallTicket,
+    studentName, fatherName, course, year, branch, academicYear, dateOfBirth, conduct
+  };
+}
+
+function createBonafidePreviewHtml($) {
   $('script, noscript').remove();
-  $('*').each((_i, element) => {
-    Object.keys(element.attribs || {}).filter((name) => /^on/i.test(name)).forEach((name) => $(element).removeAttr(name));
-  });
+  $('*').each((_i, element) => Object.keys(element.attribs || {}).filter((name) => /^on/i.test(name)).forEach((name) => $(element).removeAttr(name)));
   $('img[src]').each((_i, image) => $(image).attr('src', new URL($(image).attr('src'), `${PUBLIC_BASE_URL}bc/`).toString()));
   $('head').append(`<style id="a27-certificate-layout">
-    /* Render the portal's certificate on one predictable A4 canvas.  The
-       portal uses a fixed-width table inside another table; both must share
-       the printable width or the inner content is cut off. */
     @page { size: A4 portrait; margin: 0; }
     * { box-sizing: border-box; }
     html, body { width: 210mm; min-height: 297mm; margin: 0; overflow: hidden; background: #fff; }
     body { padding: 10mm; }
     center { display: block; width: 100%; }
-    center > table,
-    center > table > tbody > tr > td > table {
-      width: 100% !important;
-      max-width: 100% !important;
-      height: auto !important;
-    }
+    center > table, center > table > tbody > tr > td > table { width: 100% !important; max-width: 100% !important; height: auto !important; }
     img { max-width: 100% !important; height: auto !important; }
     .style12 { font-size: 16px !important; line-height: 1.65 !important; }
   </style>`);
   return $.html();
 }
 
+async function getBonafideDocument(hallTicket) {
+  const html = await publicPost(`${PUBLIC_BASE_URL}bc/bc.php`, { HallticketNo: hallTicket, submit: 'Login' });
+  if (/certificate disabled|contact\s+ao/i.test(html)) throw new AttendanceError('CERTIFICATE_UNAVAILABLE', 'A Bonafide certificate is not available for this Hall Ticket Number.', 404);
+  if (!/BONAFIDE CERTIFICATE/i.test(html)) throw new AttendanceError('UNREADABLE_RESPONSE', 'Unable to read the Bonafide certificate right now.');
+  const $ = cheerio.load(html);
+  const images = getBonafideImageUrls($);
+  return { certificate: parseBonafideCertificate($, hallTicket), images, html: createBonafidePreviewHtml($) };
+}
+
 export async function getBonafide(hallTicket) {
-  const html = await getBonafideHtml(hallTicket);
-  warmBonafideBrowser();
+  const { html } = await getBonafideDocument(hallTicket);
   return { html };
 }
 
-export async function getBonafidePdf(hallTicket) {
-  const html = await getBonafideHtml(hallTicket);
-  let page;
+async function loadBonafideImage(source) {
+  if (!source) return null;
   try {
-    const browser = await getBonafideBrowser();
-    page = await browser.newPage();
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-      const url = request.url();
-      const isCertificateResource = url.startsWith(`${PUBLIC_BASE_URL}bc/`);
-      if (url === 'about:blank' || url.startsWith('data:') || isCertificateResource) {
-        void request.continue();
-      } else {
-        void request.abort('blockedbyclient');
-      }
-    });
-    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
-    await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs });
-    await page.emulateMediaType('print');
-    return Buffer.from(await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true }));
+    const url = new URL(source);
+    const publicBase = new URL(PUBLIC_BASE_URL);
+    if (url.origin !== publicBase.origin || !url.pathname.startsWith('/parent12/bc/')) return null;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      return response.ok ? Buffer.from(await response.arrayBuffer()) : null;
+    } finally { clearTimeout(timer); }
+  } catch (error) {
+    console.warn('BONAFIDE_IMAGE_UNAVAILABLE', error.name);
+    return null;
+  }
+}
+
+function drawImageContain(doc, image, x, y, maxWidth, maxHeight) {
+  if (!image) return 0;
+  const dimensions = doc.openImage(image);
+  const scale = Math.min(maxWidth / dimensions.width, maxHeight / dimensions.height);
+  const width = dimensions.width * scale;
+  const height = dimensions.height * scale;
+  doc.image(image, x + (maxWidth - width) / 2, y, { width, height });
+  return height;
+}
+
+function certificateBody(certificate) {
+  return `This is to certify that ${certificate.studentName || ''} S/o.D/o ${certificate.fatherName || ''} was a bonafide student of this college studying ${certificate.course || ''} Course ${certificate.year || ''} & ${certificate.branch || ''} branch for the academic year ${certificate.academicYear || ''} His /Her Date of Birth as per our records is ${certificate.dateOfBirth || ''} His /Her conduct is ${certificate.conduct || ''}`.replace(/\s+/g, ' ').trim();
+}
+
+async function renderBonafidePdf(certificate, images) {
+  const [logo, signature] = await Promise.all([loadBonafideImage(images.logoUrl), loadBonafideImage(images.signatureUrl)]);
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 0, info: { Title: certificate.title } });
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.once('error', reject);
+    doc.once('end', () => resolve(Buffer.concat(chunks)));
+    try {
+      const { width: pageWidth, height: pageHeight } = doc.page;
+      const border = 28;
+      const contentX = border + 28;
+      const contentWidth = pageWidth - (contentX * 2);
+      doc.lineWidth(1.5).roundedRect(border, border, pageWidth - (border * 2), pageHeight - (border * 2), 15).stroke();
+      const logoHeight = drawImageContain(doc, logo, contentX, 48, contentWidth, 100);
+      const titleY = 58 + logoHeight;
+      doc.font('Times-Bold').fontSize(17).text(certificate.title, contentX, titleY, { width: contentWidth, align: 'center', underline: true });
+      const detailsY = titleY + 44;
+      doc.font('Times-Italic').fontSize(14)
+        .text(`Admission No : ${certificate.admissionNumber}     Date of Admission : ${certificate.dateOfAdmission}`, contentX, detailsY, { width: contentWidth })
+        .text(`Hall Ticket  No : ${certificate.hallTicket}                                              Date : ${certificate.certificateDate}`, contentX, detailsY + 27, { width: contentWidth });
+      doc.font('Times-Italic').fontSize(14).text(certificateBody(certificate), contentX, detailsY + 84, { width: contentWidth, align: 'justify', lineGap: 9 });
+      const signatureY = pageHeight - 190;
+      drawImageContain(doc, signature, contentX, signatureY, contentWidth, 95);
+      doc.font('Times-Italic').fontSize(14).text('Clerk', contentX, signatureY + 112, { width: contentWidth / 3, align: 'center' });
+      doc.text('AO', contentX + (contentWidth / 3), signatureY + 112, { width: contentWidth / 3, align: 'center' });
+      doc.text('Principal', contentX + (contentWidth * 2 / 3), signatureY + 112, { width: contentWidth / 3, align: 'center' });
+      doc.end();
+    } catch (error) { reject(error); }
+  });
+}
+
+export async function getBonafidePdf(hallTicket) {
+  try {
+    const { certificate, images } = await getBonafideDocument(hallTicket);
+    return await renderBonafidePdf(certificate, images);
   } catch (error) {
     if (error instanceof AttendanceError) throw error;
     console.error('BONAFIDE_PDF_FAILED', error.name);
-    if (error.name === 'TimeoutError') throw new AttendanceError('TIMEOUT', 'The Bonafide certificate took too long to render.', 504);
     throw new AttendanceError('PDF_ERROR', 'Unable to create the Bonafide PDF right now.');
-  } finally {
-    await page?.close().catch(() => {});
   }
 }
 
